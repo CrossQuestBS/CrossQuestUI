@@ -215,17 +215,13 @@ namespace CrossQuestUI.Services
                 await MoveFiles(Path.Join(dataDir, file), Path.Join(backupDataDir, file));
             }
             
-            var backupObbDir = $"/sdcard/CrossQuest/{packageId}/backup/obb/";
-            var obbDir = $"/sdcard/Android/obb/{packageId}/";
+            var backupObbDir = $"/sdcard/CrossQuest/{packageId}/backup/obb";
+            var obbDir = $"/sdcard/Android/obb/{packageId}";
 
             logger.WriteMessage("Backing up Obb");
             await RemoveDir(backupObbDir);
-            await CreateDir(backupObbDir);
-
-            // "/sdcard/Android/obb/{0}"
             
             await MoveFiles(obbDir, backupObbDir);
-            
 
             return true;
         }
