@@ -12,15 +12,7 @@ namespace CrossQuestUI.Services
         private readonly IDownloader _downloader;
 
         private readonly IUnityEditor _editor;
-
-        private readonly IApkTool _apkTool;
-
-        private readonly IApkPatcher _apkPatcher;
-
-        private readonly IApkSigner _apkSigner;
-
-        private readonly IAdbClient _adbClient;
-
+        
         private readonly IAndroidService _androidService;
 
         private readonly IFilesService _filesService;
@@ -34,7 +26,7 @@ namespace CrossQuestUI.Services
         private string _resourceFolder = "";
 
         private string _buildPath = "";
-        
+
         private Dictionary<string, string[]> assemblies = new Dictionary<string, string[]>
         {
             {
@@ -162,7 +154,7 @@ namespace CrossQuestUI.Services
                 ]
             }
         };
-        
+
         private void CreateLinkerFile(string linkPath)
         {
             List<string> listOfEntries = [];
@@ -172,7 +164,7 @@ namespace CrossQuestUI.Services
             {
                 listOfEntries.AddRange(keyPair.Value);
             }
-            
+
             string[] unityFiles =
             [
                 "UnityEngine.CoreModule",
@@ -189,20 +181,21 @@ namespace CrossQuestUI.Services
                 "UnityEngine.ProBuilder.Csg",
                 "UnityEngine.ProBuilder.Poly2Tri",
                 "UnityEngine.Mathematics"
-            ]; 
-            
+            ];
+
             listOfEntries.AddRange(unityFiles);
 
             var linkContent = CreateLink(listOfEntries.ToArray());
             File.WriteAllText(linkPath, linkContent);
         }
-        
+
         private string CreateLink(string[] files)
         {
             string output = "<linker>\n";
             foreach (var file in files)
             {
-                output += String.Format("   <assembly fullname=\"" + file.Split("/").Last().Split(".dll").First() + "\" preserve=\"all\"/>\n");
+                output += String.Format("   <assembly fullname=\"" + file.Split("/").Last().Split(".dll").First() +
+                                        "\" preserve=\"all\"/>\n");
             }
 
             output += "</linker>";
@@ -214,9 +207,10 @@ namespace CrossQuestUI.Services
             var plugins = Path.Join(_unityProject, "Assets", "Plugins");
 
             var pluginFolders = Directory.GetDirectories(plugins);
-    
+
             foreach (var keyPair in assemblies)
             {
+                _logger.WriteMessage($"Copying assembly family {keyPair.Key}");
                 var pluginPath = pluginFolders.First(t => t.Split("/").Last() == keyPair.Key);
 
                 if (pluginPath == "")
@@ -227,31 +221,30 @@ namespace CrossQuestUI.Services
 
                 foreach (var assemblyFile in keyPair.Value)
                 {
-                    var unityAssemblyPath = Path.Join(pluginPath, Path.GetFileName(assemblyFile));
+                    var file = Path.Join(App.Current?.ModdingConfig.GamePath, "Beat Saber_Data", "Managed",
+                        assemblyFile);
+                    var unityAssemblyPath = Path.Join(pluginPath, Path.GetFileName(file));
+                    
                     if (File.Exists(unityAssemblyPath))
                         continue;
-            
-                    File.Copy(assemblyFile, unityAssemblyPath);
+                    
+                    File.Copy(file, unityAssemblyPath, true);
                 }
             }
 
             return true;
         }
 
-        public ModdingService(IDownloader downloader, IUnityEditor editor, IAndroidService androidService, IApkTool apkTool, IApkSigner apkSigner,
-            IAdbClient adbClient, IStreamLogger logger, IApkPatcher patcher, IFilesService filesService)
+        public ModdingService(IDownloader downloader, IUnityEditor editor, IAndroidService androidService,
+            IStreamLogger logger, IFilesService filesService)
         {
             _downloader = downloader;
             _editor = editor;
-            _apkTool = apkTool;
-            _apkPatcher = patcher;
-            _apkSigner = apkSigner;
-            _adbClient = adbClient;
             _logger = logger;
             _androidService = androidService;
             _filesService = filesService;
         }
-        
+
         public async Task<bool> PrepareStep()
         {
             _logger.WriteMessage(" --- Preparing step --- ");
@@ -266,42 +259,57 @@ namespace CrossQuestUI.Services
 
             if (!File.Exists(unityBase))
                 return true;
-            
+
             _logger.WriteMessage("Unzipping UnityBase.zip");
 
             await ZipFile.ExtractToDirectoryAsync(unityBase, Path.Join(_resourceFolder, "UnityBaseProject"));
 
+            MoveUpFolder(Path.Join(_resourceFolder, "UnityBaseProject"));
+
             Directory.CreateDirectory(modsDownloadDir);
-            
+
             var baseGameApk = Path.Join(_resourceFolder, "BaseGame.apk");
 
-            
+
             _logger.WriteMessage($"Copying {App.Current?.ModdingConfig.ApkPath} to {baseGameApk}");
-            
+
             File.Copy(App.Current.ModdingConfig.ApkPath, baseGameApk);
-            
+
             _logger.WriteMessage("Installing Mods");
             foreach (var modInfo in App.Current.ModdingConfig.ModsInstalled)
-            { 
+            {
                 var zipFile = Path.Join(modsDownloadDir, $"{modInfo.Id}.zip");
                 var modFolder = Path.Join(_resourceFolder, "Mods", $"{modInfo.Id}");
-               
+
                 _logger.WriteMessage($"Installing Mod: {modInfo.Name}");
                 await _downloader.DownloadFile(modInfo.DownloadUrl, zipFile);
                 await ZipFile.ExtractToDirectoryAsync(zipFile, modFolder);
+                MoveUpFolder(modFolder);
             }
+
             _logger.WriteMessage("Done Installing Mods");
             return true;
         }
 
-        public bool SetupUnityStep()
+        private void MoveUpFolder(string folder)
+        {
+            var subDirectories = Directory.GetDirectories(folder);
+            
+            if (subDirectories.Length == 1)
+            {
+                _filesService.CopyFolder(subDirectories[0], folder);
+            }
+            
+            Directory.Delete(subDirectories[0], true);
+        }
+
+        public async Task<bool> SetupUnityStep()
         {
             _logger.WriteMessage("-- Setting up Unity Project --- ");
-            _logger.WriteMessage("Creating New Unity Project");
             _unityProject = Path.Join(_moddingPath, "UnityProject");
 
-            _editor.CreateProject(_unityProject);
-            
+            await _editor.CreateProject(_unityProject);
+
             _logger.WriteMessage("Copying Unity Base files to Unity Project ");
 
             string[] folders = ["Assets", "ProjectSettings", "Packages"];
@@ -309,18 +317,18 @@ namespace CrossQuestUI.Services
             foreach (var folder in folders)
             {
                 var path = Path.Join(_unityProject, folder);
-                _logger.WriteMessage($"Deleting {path}");
-                Directory.Delete(path);
-                
                 var unityBase = Path.Join(_resourceFolder, "UnityBaseProject", folder);
-                _logger.WriteMessage($"Copying {unityBase} to {path}");
+                _logger.WriteMessage($"Deleting {Path.GetFileName(path)}");
+                Directory.Delete(path, true);
+                _logger.WriteMessage($"Copying {Path.GetFileName(unityBase)}");
                 _filesService.CopyFolder(unityBase, path);
             }
 
             _logger.WriteMessage("Copying Game Files to Unity Project ");
             CopyGameFiles();
             var plugins = Path.Join(_unityProject, "Assets", "Plugins");
-
+           
+            _logger.WriteMessage("Creating Linker file");
             CreateLinkerFile(Path.Join(plugins, "link.xml"));
             return true;
         }
@@ -334,59 +342,54 @@ namespace CrossQuestUI.Services
             Directory.CreateDirectory(mods);
 
             var modsDirectories = Directory.GetDirectories(Path.Join(_resourceFolder, "Mods"));
-    
+
             foreach (var directory in modsDirectories)
             {
-                var directoryName = Path.GetDirectoryName(directory);
-                _logger.WriteMessage($"Copying mod {directoryName} to UnityProject: {mods}");
+                
+                var directoryName = Path.GetFileName(directory);
+                
+                _logger.WriteMessage($"Copying mod {directoryName} to UnityProject");
+
                 _filesService.CopyFolder(directory, Path.Join(mods, directoryName));
             }
-            
+
             return true;
         }
 
-        public bool CompileProjectStep()
+        public async Task<bool> CompileProjectStep()
         {
             _logger.WriteMessage("Starting to compile, this will take a while...");
             _buildPath = Path.Join(_moddingPath, "build", "build.apk");
             Directory.CreateDirectory(Path.Join(_moddingPath, "build"));
-            return _editor.CompileUnityProject(_unityProject, Path.Join(_moddingPath, "build", "build.apk"),
+            return await _editor.CompileUnityProject(_unityProject, Path.Join(_moddingPath, "build", "build.apk"),
                 "Assets/Settings/Build Profiles/Compile.asset");
         }
 
-        public bool PatchApkStep()
+        public async Task<bool> PatchApkStep()
         {
             _logger.WriteMessage($"Extracting APK from buildPath: {_buildPath}");
-            _androidService.ExtractApk(_buildPath, _buildPath.Replace(".apk", ""));
-            
+            await _androidService.ExtractApk(_buildPath, _buildPath.Replace(".apk", ""));
             
             _logger.WriteMessage($"Extracting APK from baseGame: {Path.Join(_resourceFolder, "BaseGame.apk")}");
-            
             var apkFolder = Path.Join(_moddingPath, "BaseGame");
-            _androidService.ExtractApk(Path.Join(_resourceFolder, "BaseGame.apk"), apkFolder);
-            
-            _logger.WriteMessage($"Patching apk: {_buildPath}");
-            _apkPatcher.PatchGame(_buildPath.Replace(".apk", ""), apkFolder);
+            await _androidService.ExtractApk(Path.Join(_resourceFolder, "BaseGame.apk"), apkFolder);
 
-            _androidService.ZipApk(Path.Join(_moddingPath, "PatchedGame.apk"), apkFolder);
-            _androidService.SignApk(Path.Join(_moddingPath, "PatchedGame.apk"));
+            _logger.WriteMessage($"Patching apk: {_buildPath}");
+            _androidService.PatchGame(_buildPath.Replace(".apk", ""), apkFolder);
+            _logger.WriteMessage($"Building apk: {"PatchedGame.apk"}");
+            await _androidService.BuildApk(Path.Join(_moddingPath, "PatchedGame.apk"), apkFolder);
+            _logger.WriteMessage($"Signing apk: {"PatchedGame.apk"}");
+            await _androidService.SignApk(Path.Join(_moddingPath, "PatchedGame.apk"));
             return true;
         }
 
-        public bool InstallApkStep()
+        public async Task<bool> InstallApkStep()
         {
-            if (_apkPatcher.ModdedGameInstalled("com.beatgames.beatsaber"))
-            {
-                _adbClient.InstallGame(Path.Join(_moddingPath, "PatchedGame.apk"));
-                _adbClient.ClearCache("com.beatgames.beatsaber");
-            }
-            else
-            {
-                _adbClient.ExtractObbFiles("com.beatgames.beatsaber");
-                _adbClient.InstallGame(Path.Join(_moddingPath, "PatchedGame.apk"));
-                _adbClient.ClearCache("com.beatgames.beatsaber");
-                _adbClient.CopyObbFiles("com.beatgames.beatsaber");
-            }
+            var packageId = "com.beatgames.beatsaber";
+            await _androidService.BackupFiles(packageId);
+            await _androidService.UninstallGame(packageId);
+            await _androidService.InstallGame(Path.Join(_moddingPath, "PatchedGame.apk"));
+            await _androidService.RestoreBackup(packageId);
             return true;
         }
     }

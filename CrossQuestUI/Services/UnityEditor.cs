@@ -1,19 +1,30 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using CrossQuestUI.Models;
 
 namespace CrossQuestUI.Services
 {
     public class UnityEditor : IUnityEditor
     {
-        private readonly string _unityPath = App.Current?.ModdingConfig.UnityEditorPath ?? "";
+        private string UnityPath => App.Current?.ModdingConfig.UnityEditorPath ?? "";
+
+        private readonly IStreamLogger _logger;
+
+        private readonly IProcessCaller _processCaller;
+        
+        public UnityEditor(IStreamLogger streamLogger, IProcessCaller processCaller)
+        {
+            _logger = streamLogger;
+            _processCaller = processCaller;
+        }
         
         public VerificationItem Verify(string version)
         {
             try
             { 
-                var startInfo = new ProcessStartInfo() { FileName = _unityPath, Arguments = " -- --headless", RedirectStandardOutput = true, CreateNoWindow = true}; 
+                var startInfo = new ProcessStartInfo() { FileName = UnityPath, Arguments = " -- --headless", RedirectStandardOutput = true, CreateNoWindow = true}; 
                 var proc = new Process() { StartInfo = startInfo, };
                 proc.Start();
                 while (!proc.StandardOutput.EndOfStream)
@@ -36,28 +47,17 @@ namespace CrossQuestUI.Services
             return new VerificationItem($"No Unity Version found, is correct executable selected?", false);
         }
 
-        public bool CreateProject(string projectPath)
+        public async Task<bool> CreateProject(string projectPath)
         {
             var arguments = "-batchmode ";
             arguments += $"-createProject \"{projectPath}\" ";
             arguments += "-quit -logfile - ";
-    
-            ProcessStartInfo startInfo = new ProcessStartInfo() { FileName = _unityPath, Arguments = arguments, RedirectStandardOutput = true, CreateNoWindow = true}; 
-            Process proc = new Process() { StartInfo = startInfo, };
-            proc.Start();
 
-            while (!proc.StandardOutput.EndOfStream)
-            {
-                string line = proc.StandardOutput.ReadLine();
-                Console.WriteLine(line);
-            }
-
-            proc.WaitForExit();
-
-            return proc.ExitCode == 0;
+            _logger.WriteMessage("Creating New Unity Project");
+            return await _processCaller.ProcessAsync(UnityPath, arguments);
         }
         
-        public bool CompileUnityProject(string projectPath, string buildPath, string activeBuildProfile)
+        public async Task<bool> CompileUnityProject(string projectPath, string buildPath, string activeBuildProfile)
         {
             var arguments = "-batchmode ";
             arguments += $"-project-path \"{projectPath}\" ";
@@ -65,16 +65,12 @@ namespace CrossQuestUI.Services
             arguments += $"-activeBuildProfile \"{activeBuildProfile}\" ";
             arguments += $"-build \"{buildPath}\"";
     
-            ProcessStartInfo startInfo = new ProcessStartInfo() { FileName = _unityPath, Arguments = arguments, RedirectStandardOutput = true, CreateNoWindow = true};
+            ProcessStartInfo startInfo = new ProcessStartInfo() { FileName = UnityPath, Arguments = arguments, CreateNoWindow = true};
             using Process proc = new Process();
             proc.StartInfo = startInfo;
             proc.Start();
 
-            while (!proc.StandardOutput.EndOfStream)
-            {
-                string line = proc.StandardOutput.ReadLine();
-                Console.WriteLine(line);
-            }
+            await proc.WaitForExitAsync();
 
             return File.Exists(buildPath);
         }

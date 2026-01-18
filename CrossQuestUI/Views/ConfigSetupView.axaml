@@ -38,6 +38,24 @@
             </StackPanel>
             
             <StackPanel>
+                <TextBlock Margin="0 5" >Apktool Executable</TextBlock>
+                <Grid Grid.Row="3" Grid.Column="1" ColumnSpacing="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox
+                        FontSize="14"
+                        Text="{Binding ApkToolPath, Mode=TwoWay}"
+                        Watermark="Apktool Path"
+                        UseFloatingWatermark="False"/>
+                    <Button Grid.Column="1" Command="{Binding SetApkToolPath}">
+                        Select
+                    </Button>
+                </Grid>
+            </StackPanel>
+            
+            <StackPanel>
                 <TextBlock Margin="0 5" >Android Player Folder</TextBlock>
                 <Grid Grid.Row="3" Grid.Column="1" ColumnSpacing="5">
                     <Grid.ColumnDefinitions>

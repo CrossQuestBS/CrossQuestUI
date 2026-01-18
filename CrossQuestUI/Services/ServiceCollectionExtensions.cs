@@ -10,15 +10,13 @@ namespace CrossQuestUI.Services
         {
             collection.AddSingleton<IModdingService, ModdingService>();
             collection.AddSingleton<IStreamLogger, StreamLogger>();
-            collection.AddSingleton<IApkSigner, ApkSigner>();
             collection.AddSingleton<IDownloader, Downloader>();
-            collection.AddSingleton<IApkPatcher, ApkPatcher>();
-            collection.AddSingleton<IApkTool, ApkTool>();
-            collection.AddSingleton<IAdbClient, AdbClient>();
             collection.AddSingleton<IGithubDownloader, GithubDownloader>();
             collection.AddSingleton<IAndroidService, AndroidService>();
             collection.AddSingleton<IFilesService, FilesService>();
             collection.AddSingleton<IUnityEditor, UnityEditor>();
+            collection.AddSingleton<IProcessCaller, ProcessCaller>();
+
 
             collection.AddTransient<MainWindowViewModel>();
             collection.AddTransient<IntroductionViewModel>();

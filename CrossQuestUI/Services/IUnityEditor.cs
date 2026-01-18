@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using CrossQuestUI.Models;
 
 namespace CrossQuestUI.Services
@@ -6,8 +7,8 @@ namespace CrossQuestUI.Services
     {
         public VerificationItem Verify(string version);
 
-        public bool CreateProject(string path);
+        public Task<bool> CreateProject(string path);
 
-        public bool CompileUnityProject(string projectPath, string buildPath, string activeBuildProfile);
+        public Task<bool> CompileUnityProject(string projectPath, string buildPath, string activeBuildProfile);
     }
 }

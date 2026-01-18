@@ -7,58 +7,55 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CrossQuestUI.Services;
 
 namespace CrossQuestUI.ViewModels
 {
-    public class ModdingProcessViewModel : PageViewModelBase
+    public partial class ModdingProcessViewModel(IModdingService moddingService, IStreamLogger logger)
+        : PageViewModelBase
     {
         public string Title => "Modding Game";
         public string Message => "Currently modding the game!";
 
+        [ObservableProperty]
+        private bool _isModding;
+
         public ObservableCollection<string> LogMessages { get; set; } = new ObservableCollection<string>(new List<string>());
-        
 
-        private readonly IModdingService _moddingService;
-
-        private readonly IStreamLogger _logger;
-        
-        public ModdingProcessViewModel(IModdingService moddingService, IStreamLogger moddingLogger)
+        public async Task OnLoad()
         {
-            _moddingService = moddingService;
-            _logger = moddingLogger;
-        }
-        
-
-        public void OnLoad()
-        {
-            _logger.OnMessage += (sender, args) =>
+            IsModding = true;
+            logger.OnMessage += (sender, args) =>
             {
-                var a = args as StreamLogger.StreamLoggerEventArgs;
-                LogMessages.Add(a.Message);
+                if (args is not StreamLogger.StreamLoggerEventArgs arg)
+                    return;
+                
+                LogMessages.Add(arg.Message);
             };
             
             // Step 0
-            Dispatcher.UIThread.InvokeAsync(_moddingService.PrepareStep);
+            await moddingService.PrepareStep();
             
-            /*// Step 1
-            _moddingService.SetupUnityStep();
-
+            // Step 1
+            await moddingService.SetupUnityStep();
+            
             // Step 2
-            _moddingService.SetupModsStep();
+            moddingService.SetupModsStep();
 
             // Step 3
-            if (_moddingService.CompileProjectStep())
+            if (await moddingService.CompileProjectStep())
             {
                 // Step 4
-                _moddingService.PatchApkStep();
+                await moddingService.PatchApkStep();
 
                 // Step 5
-                _moddingService.InstallApkStep();
+                await moddingService.InstallApkStep();
+                IsModding = false;
                 return;
             }
-
-            _logger.Add("Failed to compile project");*/
+            LogMessages.Add("Failed to compile project");
+            IsModding = false;
         }
 
         public override bool HasNavigation
@@ -69,7 +66,7 @@ namespace CrossQuestUI.ViewModels
 
         public override bool CanNavigateNext
         {
-            get => true;
+            get => !IsModding;
             protected set => throw new NotSupportedException();
         }
 

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using CrossQuestUI.ViewModels;
 
 namespace CrossQuestUI.Views
@@ -12,7 +13,7 @@ namespace CrossQuestUI.Views
         {
             base.OnLoaded(e);
             var vm = (ModdingProcessViewModel)DataContext;
-            vm?.OnLoad();
+            Dispatcher.UIThread.InvokeAsync(vm.OnLoad);
         }
 
         public ModdingProcessView()

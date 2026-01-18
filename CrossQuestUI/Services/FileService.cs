@@ -5,8 +5,9 @@ using Avalonia.Platform.Storage;
 
 namespace CrossQuestUI.Services
 {
-    public class FilesService : IFilesService
+    public class FilesService(IStreamLogger logger) : IFilesService
     {
+
         public async Task<IStorageFile?> OpenFileAsync()
         {
             var files = await App.Current.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
@@ -29,21 +30,23 @@ namespace CrossQuestUI.Services
             return folders.Count >= 1 ? folders[0] : null;
         }
 
-        public void CopyFolder(string folderSrc, string folderDst)
+        public void CopyFolder(string sourceFolder, string destFolder )
         {
-            Directory.CreateDirectory(folderDst);
-            
-            foreach (var file in Directory.GetFiles(folderSrc))
+            if (!Directory.Exists( destFolder ))
+                Directory.CreateDirectory( destFolder );
+            string[] files = Directory.GetFiles( sourceFolder );
+            foreach (string file in files)
             {
-                var dest = Path.Combine(folderDst, Path.GetFileName(file));
-                File.Copy(file, dest);
+                string name = Path.GetFileName( file );
+                string dest = Path.Combine( destFolder, name );
+                File.Copy( file, dest );
             }
-
-            string[] folders = Directory.GetDirectories(folderSrc);
-            foreach (var folder in folders)
+            string[] folders = Directory.GetDirectories( sourceFolder );
+            foreach (string folder in folders)
             {
-                var dest = Path.Combine(folderDst, Path.GetDirectoryName(folder) ?? "");
-                CopyFolder(folder, dest);
+                string name = Path.GetFileName( folder );
+                string dest = Path.Combine( destFolder, name );
+                CopyFolder( folder, dest );
             }
         }
     }

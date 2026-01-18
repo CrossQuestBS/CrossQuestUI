@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CrossQuestUI.Models;
 using CrossQuestUI.Services;
@@ -17,23 +18,28 @@ namespace CrossQuestUI.ViewModels
 
         [ObservableProperty]
         private bool _isVerified = false;
+
+        private readonly IAndroidService _androidService;
+        private readonly IUnityEditor _unityEditor;
         
         public ObservableCollection<VerificationItem> Verifications { get; set; } = new(new List<VerificationItem>());
 
+        public VerificationViewModel(IAndroidService androidService, IUnityEditor unityEditor)
+        {
+            _androidService = androidService;
+            _unityEditor = unityEditor;
+        }
+        
         public void OnUnload()
         {
             Verifications = new(new List<VerificationItem>());
         }
         
-        public void OnLoad()
+        public async Task OnLoad()
         {
-            var editor = new UnityEditor();
-            var adbClient = new AdbClient();
-            var apkSigner = new ApkSigner();
-
-            Verifications.Add(editor.Verify("6000.0.40f1"));
-            Verifications.Add(adbClient.Verify());
-            Verifications.Add(apkSigner.VerifyBaseApk(App.Current?.ModdingConfig.ApkPath ?? ""));
+            Verifications.Add(_unityEditor.Verify("6000.0.40f1"));
+            Verifications.Add(await _androidService.VerifyAdb());
+            Verifications.Add(await _androidService.VerifyBaseApk(App.Current?.ModdingConfig.ApkPath ?? ""));
             
             var foundOculusPlatform = File.Exists(Path.Join(App.Current?.ModdingConfig.GamePath, "Beat Saber_Data", "Managed", "Oculus.Platform.dll"));
             

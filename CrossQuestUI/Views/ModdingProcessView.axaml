@@ -28,12 +28,12 @@
                        TextAlignment="Center">
                 Modding Logs:
             </TextBlock>
-            <Border BorderBrush="White" BorderThickness="2" Width="300" Height="200" MaxHeight="200" CornerRadius="2" Padding="5">
-                <ScrollViewer HorizontalAlignment="Center" Width="300" Height="200" MaxHeight="200">
+            <Border Margin="10 0" BorderBrush="White" BorderThickness="2" Height="200" MaxHeight="200" CornerRadius="2" Padding="5">
+                <ScrollViewer HorizontalAlignment="Center" Height="200" MaxHeight="200">
                     <ItemsRepeater ItemsSource="{Binding LogMessages}">
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock HorizontalAlignment="Center" Margin="0 5"
+                                <TextBlock HorizontalAlignment="Center" FontSize="10" Margin="0 5"
                                            Text="{Binding}" />
                             </DataTemplate>
                         </ItemsRepeater.ItemTemplate>

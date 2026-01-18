@@ -12,7 +12,7 @@ namespace CrossQuestUI.ViewModels
     public partial class ConfigSetupViewModel : PageViewModelBase
     {
         [ObservableProperty]
-        private string _editorPath = "/Applications/Unity/Hub/Editor/6000.0.40f1/Unity.app/Contents/MacOS/Unity";
+        private string _editorPath = "";
         
         [ObservableProperty]
         private string _questGame = "";
@@ -21,7 +21,10 @@ namespace CrossQuestUI.ViewModels
         private string _gamePath = "";
         
         [ObservableProperty]
-        private string _androidPlayer = "/Applications/Unity/Hub/Editor/6000.0.40f1/PlaybackEngines/AndroidPlayer";
+        private string _androidPlayer = "";
+        
+        [ObservableProperty]
+        private string _apkToolPath = "";
 
         private readonly IFilesService _filesService;
 
@@ -39,11 +42,11 @@ namespace CrossQuestUI.ViewModels
         private void Update()
         {
             HasFilledOut = Directory.Exists(GamePath) && File.Exists(QuestGame) && File.Exists(EditorPath) &&
-                           Directory.Exists(AndroidPlayer);
+                           Directory.Exists(AndroidPlayer) && File.Exists(ApkToolPath);
 
             if (HasFilledOut)
             {
-                App.Current?.ModdingConfig = new ModdingConfig(EditorPath, QuestGame, GamePath, AndroidPlayer,[]);
+                App.Current?.ModdingConfig = new ModdingConfig(EditorPath, QuestGame, GamePath, AndroidPlayer,ApkToolPath,[]);
             }
         }
 
@@ -55,6 +58,28 @@ namespace CrossQuestUI.ViewModels
             if (file is not null)
             {
                 EditorPath = Uri.UnescapeDataString(file.Path.AbsolutePath);
+            }
+        }
+        
+        [RelayCommand]
+        public async Task SetAndroidPlayerPath()
+        {
+            var folder = await _filesService.OpenFolderAsync();
+
+            if (folder is not null)
+            {
+                AndroidPlayer = Uri.UnescapeDataString(folder.Path.AbsolutePath);
+            }
+        }
+        
+        [RelayCommand]
+        public async Task SetApkToolPath()
+        {
+            var file = await _filesService.OpenFileAsync();
+
+            if (file is not null)
+            {
+                ApkToolPath = Uri.UnescapeDataString(file.Path.AbsolutePath);
             }
         }
         
@@ -71,18 +96,6 @@ namespace CrossQuestUI.ViewModels
         }
         
         [RelayCommand]
-        public async Task SetAndroidPlayerPath()
-        {
-            var file = await _filesService.OpenFileAsync();
-
-            if (file is not null)
-            {
-                AndroidPlayer = Uri.UnescapeDataString(file.Path.AbsolutePath);
-            }
-        }
-
-        
-        [RelayCommand]
         public async Task SetGamePath()
         {
 
@@ -93,6 +106,7 @@ namespace CrossQuestUI.ViewModels
                 GamePath = Uri.UnescapeDataString(folder.Path.AbsolutePath);
             }
         }
+        
         
         public override bool HasNavigation
         {
