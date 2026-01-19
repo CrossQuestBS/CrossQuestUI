@@ -86,6 +86,11 @@ namespace CrossQuestUI.Services
             return true;
         }
 
+        public async Task<bool> GiveAppExternalStoragePermission(string packageId)
+        {
+            return await processCaller.ProcessAsync(Adb, $"shell appops set --uid {packageId} MANAGE_EXTERNAL_STORAGE allow");
+        }
+
         public async Task<VerificationItem> VerifyBaseApk(string apkPath)
         {
             try
@@ -191,62 +196,22 @@ namespace CrossQuestUI.Services
 
         public async Task<bool> BackupFiles(string packageId)
         {
-            string[] backupDirs = ["/sdcard/Android/data/{0}", ];
-            string[] excludeDirs = ["/sdcard/CrossQuest/{0}/files/il2cpp", "/sdcard/CrossQuest/{0}/cache"];
-
             logger.WriteMessage("Backing up files");
-            string[] dataFilesTobackup =
-            [
-                $"PlayerData.dat",
-                $"PlayerData.dat.bak",
-                $"settings.ini",
-            ];
+            await CreateDir($"/sdcard/Android/data/{packageId}");
+            await MoveFiles($"/sdcard/Android/data/{packageId}/files", $"/sdcard/CrossQuest/{packageId}");
             
-            var backupDataDir = $"/sdcard/CrossQuest/{packageId}/backup/files";
-            var dataDir = $"/sdcard/Android/data/{packageId}/files";
-            
-            // Backup DataDir
-            logger.WriteMessage("Backing up DataDir");
-            await RemoveDir(backupDataDir);
-            await CreateDir(backupDataDir);
-
-            foreach (var file in dataFilesTobackup)
-            {
-                await MoveFiles(Path.Join(dataDir, file), Path.Join(backupDataDir, file));
-            }
-            
-            var backupObbDir = $"/sdcard/CrossQuest/{packageId}/backup/obb";
+            var backupObbDir = $"/sdcard/CrossQuest/{packageId}/obb";
             var obbDir = $"/sdcard/Android/obb/{packageId}";
-
-            logger.WriteMessage("Backing up Obb");
-            await RemoveDir(backupObbDir);
             
+            await RemoveDir(backupObbDir);
+            logger.WriteMessage("Backing up Obb");
             await MoveFiles(obbDir, backupObbDir);
-
             return true;
         }
 
         public async Task<bool> RestoreBackup(string packageId)
         {
-            string[] dataFilesTobackup =
-            [
-                $"PlayerData.dat",
-                $"PlayerData.dat.bak",
-                $"settings.ini",
-            ];
-            
-            var backupDataDir = $"/sdcard/CrossQuest/{packageId}/backup/files";
-            var dataDir = $"/sdcard/Android/data/{packageId}/files";
-
-            await CreateDir($"/sdcard/Android/data/{packageId}");
-            await CreateDir($"/sdcard/Android/data/{packageId}/files");
-            
-            foreach (var file in dataFilesTobackup)
-            {
-                await MoveFiles( Path.Join(backupDataDir, file), Path.Join(dataDir, file));
-            }
-            
-            var backupObbDir = $"/sdcard/CrossQuest/{packageId}/backup/obb";
+            var backupObbDir = $"/sdcard/CrossQuest/{packageId}/obb";
             var obbDir = $"/sdcard/Android/obb/{packageId}";
 
             await RemoveDir(obbDir);
@@ -260,7 +225,11 @@ namespace CrossQuestUI.Services
                 $"SHA-256 digest: {expectedSha256}");
         }
 
-
+        public async Task<bool> PathExists(string path)
+        {
+            return await processCaller.ProcessAsync(Adb, $"shell stat {path}");
+        }
+        
         public async Task<bool> ClearCache(string packageId)
         {
             return await processCaller.ProcessAsync(Adb, $"shell pm clear {packageId}");

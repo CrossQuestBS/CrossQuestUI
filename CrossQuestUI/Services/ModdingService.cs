@@ -390,6 +390,7 @@ namespace CrossQuestUI.Services
             await _androidService.UninstallGame(packageId);
             await _androidService.InstallGame(Path.Join(_moddingPath, "PatchedGame.apk"));
             await _androidService.RestoreBackup(packageId);
+            await _androidService.GiveAppExternalStoragePermission(packageId);
             return true;
         }
     }

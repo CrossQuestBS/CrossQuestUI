@@ -21,5 +21,7 @@ namespace CrossQuestUI.Services
         public Task<bool> ModdedGameInstalled(string packageId);
 
         public bool PatchGame(string extractedBuildPath, string apkPath);
+
+        public Task<bool> GiveAppExternalStoragePermission(string packageId);
     }
 }
