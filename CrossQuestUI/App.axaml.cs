@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
+using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using CrossQuestUI.Models;
@@ -24,6 +25,22 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        
+        var services = new ServiceCollection();
+            
+        if (Design.IsDesignMode) {
+            services.AddDesignServices();
+        }
+        else
+        {
+            services.AddCommonServices();
+        }
+
+
+        Services = services.BuildServiceProvider();
+
+
+        
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
 
@@ -40,13 +57,7 @@ public partial class App : Application
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
            
-            var services = new ServiceCollection();
-            
-            services.AddCommonServices();
-
-            Services = services.BuildServiceProvider();
-            
-
+          
             var vm = Services.GetRequiredService<MainWindowViewModel>();
             
             desktop.MainWindow = new MainWindow

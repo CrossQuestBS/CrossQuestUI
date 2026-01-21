@@ -6,6 +6,13 @@ namespace CrossQuestUI.Services
 {
     public static class ServiceCollectionExtensions
     {
+        public static void AddDesignServices(this IServiceCollection collection)
+        {
+            collection.AddSingleton<IModdingInstanceService, ModdingInstanceServiceMock>();
+            collection.AddTransient<IntroductionViewModel>();
+
+        }
+        
         public static void AddCommonServices(this IServiceCollection collection)
         {
             collection.AddSingleton<IModdingService, ModdingService>();
@@ -16,7 +23,7 @@ namespace CrossQuestUI.Services
             collection.AddSingleton<IFilesService, FilesService>();
             collection.AddSingleton<IUnityEditor, UnityEditor>();
             collection.AddSingleton<IProcessCaller, ProcessCaller>();
-
+            collection.AddSingleton<IModdingInstanceService, ModdingInstanceService>();
 
             collection.AddTransient<MainWindowViewModel>();
             collection.AddTransient<IntroductionViewModel>();

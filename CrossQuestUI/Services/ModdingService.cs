@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using CrossQuestUI.Models;
 
 namespace CrossQuestUI.Services
 {
@@ -247,18 +248,16 @@ namespace CrossQuestUI.Services
 
         public async Task<bool> PrepareStep()
         {
-            _logger.WriteMessage(" --- Preparing step --- ");
-            _moddingPath = Path.Join(App.Current.ApplicationPath, "Projects", Guid.NewGuid().ToString());
-            var downloadDir = Path.Join(App.Current?.ApplicationPath, "Downloads");
-            _resourceFolder = Path.Join(App.Current?.ApplicationPath, "Resources", Guid.NewGuid().ToString());
+            _logger.WriteMessage("Preparing");
+            var downloadDir = Path.Join(_moddingPath, "Downloads");
+            
+            _resourceFolder = Path.Join(_moddingPath, "Resources", Guid.NewGuid().ToString());
+            
             var modsDownloadDir = Path.Join(downloadDir, "Mods");
 
             Directory.CreateDirectory(_resourceFolder);
 
             var unityBase = Path.Join(downloadDir, "UnityBase.zip");
-
-            if (!File.Exists(unityBase))
-                return true;
 
             _logger.WriteMessage("Unzipping UnityBase.zip");
 
@@ -391,6 +390,18 @@ namespace CrossQuestUI.Services
             await _androidService.InstallGame(Path.Join(_moddingPath, "PatchedGame.apk"));
             await _androidService.RestoreBackup(packageId);
             await _androidService.GiveAppExternalStoragePermission(packageId);
+            return true;
+        }
+
+        public async Task<bool> RunProcess(bool initial, ModdingInstance instance)
+        {
+            if (initial)
+            {
+                _moddingPath = instance.Path;
+                await PrepareStep();
+            }
+            
+            await CompileProjectStep();
             return true;
         }
     }

@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using CrossQuestUI.Models;
 
 namespace CrossQuestUI.Services
 {
@@ -10,5 +11,7 @@ namespace CrossQuestUI.Services
         public Task<bool> CompileProjectStep();
         public Task<bool> PatchApkStep();
         public Task<bool> InstallApkStep();
+
+        public Task<bool> RunProcess(bool initial, ModdingInstance instance);
     }
 }
